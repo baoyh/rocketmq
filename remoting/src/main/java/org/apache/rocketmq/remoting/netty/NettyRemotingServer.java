@@ -41,6 +41,7 @@ import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
 import java.util.NoSuchElementException;
 import java.util.Timer;
@@ -376,6 +377,8 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, ByteBuf msg) throws Exception {
 
+            // System.out.println(msg.getCharSequence(0, msg.capacity(), Charset.defaultCharset()));
+
             // mark the current position so that we can peek the first byte to determine if the content is starting with
             // TLS handshake
             msg.markReaderIndex();
@@ -430,7 +433,19 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, RemotingCommand msg) throws Exception {
-            processMessageReceived(ctx, msg);
+            // 调试用, 处理发送到 topic 中的请求
+            try {
+                if (msg.getExtFields().containsKey("topic") && msg.getExtFields().get("topic").equals("TopicTest")) {
+                    processMessageReceived(ctx, msg);
+                } else if (msg.getExtFields().containsKey("b") && msg.getExtFields().get("b").equals("TopicTest")) {
+                    processMessageReceived(ctx, msg);
+                } else {
+                    processMessageReceived(ctx, msg);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                processMessageReceived(ctx, msg);
+            }
         }
     }
 

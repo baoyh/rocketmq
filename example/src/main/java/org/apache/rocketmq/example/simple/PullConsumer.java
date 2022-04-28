@@ -41,7 +41,7 @@ public class PullConsumer {
         consumer.setNamesrvAddr("127.0.0.1:9876");
         Set<String> topics = new HashSet<>();
         //You would better to register topics,It will use in rebalance when starting
-        topics.add("TopicTest");
+        topics.add("SecondTopic");
         consumer.setRegisterTopics(topics);
         consumer.start();
 
@@ -57,6 +57,9 @@ public class PullConsumer {
 
                 public void doSomething(List<MessageExt> msgs) {
                     //do your business
+                    for (MessageExt msg : msgs) {
+                        System.out.println(Thread.currentThread().getName() + " consumer [" + msg.toString() + "]");
+                    }
 
                 }
 

@@ -61,7 +61,10 @@ public class ClientConfig {
 
     private boolean useTLS = TlsSystemConfig.tlsEnable;
 
-    private int mqClientApiTimeout = 3 * 1000;
+    /**
+     * 调试用, 将原先的 3 * 1000 改为 3 * 1000000
+     */
+    private int mqClientApiTimeout = 3 * 1000000;
 
     private LanguageCode language = LanguageCode.JAVA;
 

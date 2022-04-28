@@ -36,6 +36,7 @@ import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.security.cert.CertificateException;
 import java.util.Collections;
@@ -636,7 +637,20 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, RemotingCommand msg) throws Exception {
-            processMessageReceived(ctx, msg);
+            // 方便调试 namesrv 到 client 的调用
+            try {
+                SocketAddress socketAddress = ctx.pipeline().channel().remoteAddress();
+                if (socketAddress instanceof InetSocketAddress) {
+                    if (((InetSocketAddress)socketAddress).getPort() == 10911) {
+                        processMessageReceived(ctx, msg);
+                    }
+                } else {
+                    processMessageReceived(ctx, msg);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                processMessageReceived(ctx, msg);
+            }
         }
     }
 
