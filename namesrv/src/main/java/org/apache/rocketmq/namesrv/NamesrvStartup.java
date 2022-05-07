@@ -143,6 +143,7 @@ public class NamesrvStartup {
             System.exit(-3);
         }
 
+        // 通过 JVM Hook 优雅停止线程池
         Runtime.getRuntime().addShutdownHook(new ShutdownHookThread(log, (Callable<Void>) () -> {
             controller.shutdown();
             return null;

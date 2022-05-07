@@ -217,6 +217,9 @@ public class RemotingUtil {
     }
 
     public static void closeChannel(Channel channel) {
+        if (((InetSocketAddress) channel.localAddress()).getPort() == 10911) {
+            System.out.println("inter");
+        }
         final String addrRemote = RemotingHelper.parseChannelRemoteAddr(channel);
         channel.close().addListener(new ChannelFutureListener() {
             @Override

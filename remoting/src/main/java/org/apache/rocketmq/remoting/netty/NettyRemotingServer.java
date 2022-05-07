@@ -56,10 +56,7 @@ import org.apache.rocketmq.remoting.ChannelEventListener;
 import org.apache.rocketmq.remoting.InvokeCallback;
 import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.RemotingServer;
-import org.apache.rocketmq.remoting.common.Pair;
-import org.apache.rocketmq.remoting.common.RemotingHelper;
-import org.apache.rocketmq.remoting.common.RemotingUtil;
-import org.apache.rocketmq.remoting.common.TlsMode;
+import org.apache.rocketmq.remoting.common.*;
 import org.apache.rocketmq.remoting.exception.RemotingSendRequestException;
 import org.apache.rocketmq.remoting.exception.RemotingTimeoutException;
 import org.apache.rocketmq.remoting.exception.RemotingTooMuchRequestException;
@@ -433,17 +430,19 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, RemotingCommand msg) throws Exception {
-            // 调试用, 处理发送到 topic 中的请求
-            try {
-                if (msg.getExtFields().containsKey("topic") && msg.getExtFields().get("topic").equals("TopicTest")) {
-                    processMessageReceived(ctx, msg);
-                } else if (msg.getExtFields().containsKey("b") && msg.getExtFields().get("b").equals("TopicTest")) {
-                    processMessageReceived(ctx, msg);
-                } else {
-                    processMessageReceived(ctx, msg);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
+            // 查找 broker 路由信息, for namesrv
+            if (msg.getCode() == RequestCode.GET_ROUTEINFO_BY_TOPIC) {
+                processMessageReceived(ctx, msg);
+            }
+            // 接收信息, for broker
+            else if (msg.getCode() == RequestCode.SEND_MESSAGE) {
+                processMessageReceived(ctx, msg);
+            }
+            // 注册 broker, for namesrv
+            else if (msg.getCode() == RequestCode.REGISTER_BROKER) {
+                processMessageReceived(ctx, msg);
+            }
+            else {
                 processMessageReceived(ctx, msg);
             }
         }

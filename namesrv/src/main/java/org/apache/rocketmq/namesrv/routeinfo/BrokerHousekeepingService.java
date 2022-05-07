@@ -37,6 +37,9 @@ public class BrokerHousekeepingService implements ChannelEventListener {
 
     @Override
     public void onChannelClose(String remoteAddr, Channel channel) {
+        if (remoteAddr.contains("10911")) {
+            System.out.println("broker");
+        }
         this.namesrvController.getRouteInfoManager().onChannelDestroy(remoteAddr, channel);
     }
 
