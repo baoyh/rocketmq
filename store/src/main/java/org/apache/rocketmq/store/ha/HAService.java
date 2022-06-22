@@ -107,9 +107,13 @@ public class HAService {
     // }
 
     public void start() throws Exception {
+        // 主服务启动, 并在特定端口上监听从服务器的连接
         this.acceptSocketService.beginAccept();
+        // 从服务器主动连接主服务器, 主服务器接收客户端的连接, 并建立相关 TCP 连接
         this.acceptSocketService.start();
+        // 从服务器主动向主服务器发送待拉取消息偏移量, 主服务器解析请求并返回消息给从服务器
         this.groupTransferService.start();
+        // 从服务器报错消息并继续发送新的消息同步请求
         this.haClient.start();
     }
 
@@ -208,6 +212,7 @@ public class HAService {
 
                     if (selected != null) {
                         for (SelectionKey k : selected) {
+                            // 处理连接上来的 slave
                             if ((k.readyOps() & SelectionKey.OP_ACCEPT) != 0) {
                                 SocketChannel sc = ((ServerSocketChannel) k.channel()).accept();
 
@@ -250,6 +255,8 @@ public class HAService {
 
     /**
      * GroupTransferService Service
+     *
+     * 主从同步阻塞实现, 在消息到达主后, 需要再传输到从, 从落盘后才算发送成功
      */
     class GroupTransferService extends ServiceThread {
 
@@ -283,6 +290,12 @@ public class HAService {
             }
         }
 
+        /**
+         * 判断主从是否完成的依据是 slave 中已成功复制的最大偏移量
+         * 是否大于等于消息生产者发送消息后消息服务器端返回下一条消息的起始偏移量
+         *
+         * 如果是, 唤醒消息发送线程, 否则等待 1s 再次判断
+         */
         private void doWaitTransfer() {
             if (!this.requestsRead.isEmpty()) {
                 for (CommitLog.GroupCommitRequest req : this.requestsRead) {
@@ -326,6 +339,9 @@ public class HAService {
         }
     }
 
+    /**
+     * slave 端的核心类
+     */
     class HAClient extends ServiceThread {
         private static final int READ_MAX_BUFFER_SIZE = 1024 * 1024 * 4;
         private final AtomicReference<String> masterAddress = new AtomicReference<>();
@@ -334,6 +350,7 @@ public class HAService {
         private Selector selector;
         private long lastWriteTimestamp = System.currentTimeMillis();
 
+        // 此时 commitlog 文件的最大偏移量, 反映当前的复制进度
         private long currentReportedOffset = 0;
         private int dispatchPosition = 0;
         private ByteBuffer byteBufferRead = ByteBuffer.allocate(READ_MAX_BUFFER_SIZE);
@@ -360,6 +377,9 @@ public class HAService {
             return needHeart;
         }
 
+        /**
+         * 向 master 报告自己当前的最大偏移量
+         */
         private boolean reportSlaveMaxOffset(final long maxOffset) {
             this.reportOffset.position(0);
             this.reportOffset.limit(8);
@@ -404,6 +424,9 @@ public class HAService {
             this.byteBufferBackup = tmp;
         }
 
+        /**
+         * 处理从 master 传回的消息
+         */
         private boolean processReadEvent() {
             int readSizeZeroTimes = 0;
             while (this.byteBufferRead.hasRemaining()) {
@@ -494,6 +517,9 @@ public class HAService {
             return result;
         }
 
+        /**
+         * 连接 master
+         */
         private boolean connectMaster() throws ClosedChannelException {
             if (null == socketChannel) {
                 String addr = this.masterAddress.get();

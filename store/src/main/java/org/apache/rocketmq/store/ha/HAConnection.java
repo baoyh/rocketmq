@@ -29,6 +29,9 @@ import org.apache.rocketmq.remoting.common.RemotingUtil;
 import org.apache.rocketmq.remoting.netty.NettySystemConfig;
 import org.apache.rocketmq.store.SelectMappedBufferResult;
 
+/**
+ * master 在收到从服务的连接请求后, 会将主服务器的连接封装成 HAConnection, 用于主从之间的读写
+ */
 public class HAConnection {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private final HAService haService;
@@ -37,7 +40,9 @@ public class HAConnection {
     private WriteSocketService writeSocketService;
     private ReadSocketService readSocketService;
 
+    // slave 请求拉取的偏移量
     private volatile long slaveRequestOffset = -1;
+    // slave 已完成拉取的偏移量
     private volatile long slaveAckOffset = -1;
 
     public HAConnection(final HAService haService, final SocketChannel socketChannel) throws IOException {
@@ -83,6 +88,9 @@ public class HAConnection {
         return socketChannel;
     }
 
+    /**
+     * master 从 slave 读数据
+     */
     class ReadSocketService extends ServiceThread {
         private static final int READ_MAX_BUFFER_SIZE = 1024 * 1024;
         private final Selector selector;
@@ -201,6 +209,9 @@ public class HAConnection {
         }
     }
 
+    /**
+     * master 向 slave 写数据
+     */
     class WriteSocketService extends ServiceThread {
         private final Selector selector;
         private final SocketChannel socketChannel;
@@ -227,12 +238,15 @@ public class HAConnection {
                 try {
                     this.selector.select(1000);
 
+                    // -1 表示 master 还未收到从服务器的拉取请求, 放弃本次处理
                     if (-1 == HAConnection.this.slaveRequestOffset) {
                         Thread.sleep(10);
                         continue;
                     }
 
+                    // 表示初次进行数据传输, 计算待传输的物理偏移量
                     if (-1 == this.nextTransferFromWhere) {
+                        // 0 表示从当前 commitlog 的最大偏移量开始传输
                         if (0 == HAConnection.this.slaveRequestOffset) {
                             long masterOffset = HAConnection.this.haService.getDefaultMessageStore().getCommitLog().getMaxOffset();
                             masterOffset =
@@ -246,6 +260,7 @@ public class HAConnection {
 
                             this.nextTransferFromWhere = masterOffset;
                         } else {
+                            // 否则根据 slave 的请求偏移量进行传输
                             this.nextTransferFromWhere = HAConnection.this.slaveRequestOffset;
                         }
 
@@ -253,11 +268,14 @@ public class HAConnection {
                             + "], and slave request " + HAConnection.this.slaveRequestOffset);
                     }
 
+                    // 判断上次写事件是否已将信息全部写入客户端
                     if (this.lastWriteOver) {
 
                         long interval =
                             HAConnection.this.haService.getDefaultMessageStore().getSystemClock().now() - this.lastWriteTimestamp;
 
+                        // 如果已全部写入, 且距离上次写入时间间隔大于心跳检测时间则发送心跳包
+                        // 避免长连接由于空闲被关闭
                         if (interval > HAConnection.this.haService.getDefaultMessageStore().getMessageStoreConfig()
                             .getHaSendHeartbeatInterval()) {
 
@@ -274,12 +292,16 @@ public class HAConnection {
                         }
                     } else {
                         this.lastWriteOver = this.transferData();
+                        // 如果上次数据未写完, 继续传输上一次数据
                         if (!this.lastWriteOver)
                             continue;
                     }
 
+                    // 要传给 slave 的数据
                     SelectMappedBufferResult selectResult =
                         HAConnection.this.haService.getDefaultMessageStore().getCommitLogData(this.nextTransferFromWhere);
+
+                    // 如果消息不为空则开始传输
                     if (selectResult != null) {
                         int size = selectResult.getSize();
                         if (size > HAConnection.this.haService.getDefaultMessageStore().getMessageStoreConfig().getHaTransferBatchSize()) {
@@ -301,7 +323,7 @@ public class HAConnection {
 
                         this.lastWriteOver = this.transferData();
                     } else {
-
+                        // 没数据, 则等待 100ms
                         HAConnection.this.haService.getWaitNotifyObject().allWaitForRunning(100);
                     }
                 } catch (Exception e) {
