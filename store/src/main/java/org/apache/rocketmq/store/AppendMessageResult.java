@@ -25,15 +25,19 @@ public class AppendMessageResult {
     // Return code
     private AppendMessageStatus status;
     // Where to start writing
+    // 开始写入的偏移量
     private long wroteOffset;
     // Write Bytes
+    // 写了多少字节的数据
     private int wroteBytes;
     // Message ID
     private String msgId;
+    // 用于创建 msgId
     private Supplier<String> msgIdSupplier;
     // Message storage timestamp
     private long storeTimestamp;
     // Consume queue's offset(step by one)
+    // 消息消费队列逻辑偏移量, 类似于数组下标
     private long logicsOffset;
     private long pagecacheRT = 0;
 

@@ -36,15 +36,34 @@ public class MappedFileQueue {
 
     private static final int DELETE_FILES_BATCH_MAX = 10;
 
+    /**
+     * 存储目录
+     */
     private final String storePath;
 
+    /**
+     * 单个文件的存储大小
+     */
     protected final int mappedFileSize;
 
+    /**
+     * 文件集合
+     */
     protected final CopyOnWriteArrayList<MappedFile> mappedFiles = new CopyOnWriteArrayList<MappedFile>();
 
+    /**
+     * 用于创建 MappedFile 类
+     */
     private final AllocateMappedFileService allocateMappedFileService;
 
+    /**
+     * 当前刷盘指针, 表示之前的数据已全部持久化到磁盘
+     */
     protected long flushedWhere = 0;
+
+    /**
+     * 当前数据提交指针, 内存中 bytebuffer 当前的写指针, 该值大于等于 flushWhere
+     */
     private long committedWhere = 0;
 
     private volatile long storeTimestamp = 0;
@@ -75,6 +94,11 @@ public class MappedFileQueue {
         }
     }
 
+    /**
+     * 根据消息存储时间来查找
+     * 返回第一个最后更新时间大于等于时间戳的文件
+     * 如未找到则返回最后一个
+     */
     public MappedFile getMappedFileByTime(final long timestamp) {
         Object[] mfs = this.copyMappedFiles(0);
 
@@ -321,6 +345,9 @@ public class MappedFileQueue {
         return 0;
     }
 
+    /**
+     * 返回当前写指针
+     */
     public long getMaxWrotePosition() {
         MappedFile mappedFile = getLastMappedFile();
         if (mappedFile != null) {
@@ -486,6 +513,9 @@ public class MappedFileQueue {
                         this.mappedFileSize,
                         this.mappedFiles.size());
                 } else {
+                    // 这里不采用 offset % mappedFileSize 的方法来计算下标
+                    // 因为 mappedFile 是会被定期删除的
+                    // 所以需要减去第一个文件的下标
                     int index = (int) ((offset / this.mappedFileSize) - (firstMappedFile.getFileFromOffset() / this.mappedFileSize));
                     MappedFile targetFile = null;
                     try {
