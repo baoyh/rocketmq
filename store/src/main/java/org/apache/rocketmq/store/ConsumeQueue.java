@@ -29,14 +29,29 @@ import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.store.config.BrokerRole;
 import org.apache.rocketmq.store.config.StorePathConfigHelper;
 
+/**
+ * ConsumeQueue 面向消费端, 被设计为 CommitLog 的消息索引
+ *
+ * 存储各个消息在 CommitLog 中的偏移量和消息大小和消息 Tag
+ * 因为同一个 Topic 在 CommitLog 的不一定是连续的, ConsumeQueue 记录 Topic/Queue/Index 下的消息在 CommitLog 中的位置来避免全文件扫描
+ *
+ * 每个 Queue 都对应着一个 ConsumeQueue
+ */
 public class ConsumeQueue {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
+    /**
+     * commitlog offset (8) + size (4) + tag hashcode (8)
+     */
     public static final int CQ_STORE_UNIT_SIZE = 20;
     private static final InternalLogger LOG_ERROR = InternalLoggerFactory.getLogger(LoggerName.STORE_ERROR_LOGGER_NAME);
 
     private final DefaultMessageStore defaultMessageStore;
 
+    /**
+     * 这里的 MappedFileQueue 对应 ${ROCKETMQ_HOME}/store/consumequeue/topic/queue
+     * 如 C:/Users/PC/store/consumequeue/TopicTest/0
+     */
     private final MappedFileQueue mappedFileQueue;
     private final String topic;
     private final int queueId;
@@ -156,6 +171,9 @@ public class ConsumeQueue {
         }
     }
 
+    /**
+     * 根据时间戳查找偏移量
+     */
     public long getOffsetInQueueByTime(final long timestamp) {
         MappedFile mappedFile = this.mappedFileQueue.getMappedFileByTime(timestamp);
         if (mappedFile != null) {
@@ -541,15 +559,24 @@ public class ConsumeQueue {
         }
     }
 
+    /**
+     * 根据 startIndex 获取消息消费队列条目
+     * 虽然每个 consumerqueue 文件大小有限 (默认为 30w 条索引, 所以大小就是 600w byte), 但因为每个索引大小都固定, 所以可以将
+     * queue 文件夹下的所有文件看做是一个连续的数组, startIndex 就是数组的下标, startIndex * 20 就是索引在文件中的物理偏移量
+     *
+     * @param startIndex 数组下标
+     */
     public SelectMappedBufferResult getIndexBuffer(final long startIndex) {
         int mappedFileSize = this.mappedFileSize;
         long offset = startIndex * CQ_STORE_UNIT_SIZE;
         if (offset >= this.getMinLogicOffset()) {
+            // 根据偏移量在文件夹中找到文件
             MappedFile mappedFile = this.mappedFileQueue.findMappedFileByOffset(offset);
             if (mappedFile != null) {
                 return mappedFile.selectMappedBuffer((int) (offset % mappedFileSize));
             }
         }
+        // 如果小于 minLogicOffset, 表示消息已被删除, 返回 null
         return null;
     }
 

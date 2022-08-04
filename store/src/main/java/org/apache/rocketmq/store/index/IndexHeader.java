@@ -22,11 +22,38 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class IndexHeader {
     public static final int INDEX_HEADER_SIZE = 40;
+
+    /**
+     * 表示在 IndexHeader 中的起始偏移量, 配合 endTimestampIndex 可以得知
+     * beginTimestamp 长度为 8 byte, 下同
+     *
+     * 消息的最小存储时间
+     */
     private static int beginTimestampIndex = 0;
+
+    /**
+     * 消息的最大存储时间
+     */
     private static int endTimestampIndex = 8;
+
+    /**
+     * 消息在 commitlog 中的最小物理偏移量
+     */
     private static int beginPhyoffsetIndex = 16;
+
+    /**
+     * 消息在 commitlog 中的最大物理偏移量
+     */
     private static int endPhyoffsetIndex = 24;
+
+    /**
+     * hashslot 个数, 并不是 hash 槽使用个数, 在这里意义不大
+     */
     private static int hashSlotcountIndex = 32;
+
+    /**
+     * Index 条目列表当前已使用的个数, 按顺序存储
+     */
     private static int indexCountIndex = 36;
     private final ByteBuffer byteBuffer;
     private AtomicLong beginTimestamp = new AtomicLong(0);

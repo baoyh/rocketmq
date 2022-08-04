@@ -25,9 +25,22 @@ import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.store.MappedFile;
 
+/**
+ * 提供了一种可以通过 key 或时间区间来查询消息的方法
+ */
 public class IndexFile {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
+    /**
+     * hash 槽占 4 个字节, 默认是 500w 个
+     */
     private static int hashSlotSize = 4;
+
+    /**
+     * index 占 20 个字节, 默认是 2000w 个
+     * key 的 hashcode(4) + 消息对应的物理偏移量 phyoffset(8) +
+     * 该消息存储时间与第一条消息的时间戳插值 timedif(4) +
+     * 该条目的前一条记录的 Index 索引, 当出现 hash 冲突时, 构建的链表结构 pre index no(4)
+     */
     private static int indexSize = 20;
     private static int invalidIndex = 0;
     private final int hashSlotNum;
