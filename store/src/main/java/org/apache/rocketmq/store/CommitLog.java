@@ -1319,7 +1319,7 @@ public class CommitLog {
             // PHY OFFSET
             long wroteOffset = fileFromOffset + byteBuffer.position();
 
-            // 方法用于创建消息 ID, 长度为 16
+            // 方法用于创建消息 ID
             Supplier<String> msgIdSupplier = () -> {
                 int sysflag = msgInner.getSysFlag();
                 int msgIdLen = (sysflag & MessageSysFlag.STOREHOSTADDRESS_V6_FLAG) == 0 ? 4 + 4 + 8 : 16 + 4 + 8;
