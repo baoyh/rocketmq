@@ -69,7 +69,10 @@ public class Consumer {
             @Override
             public ConsumeConcurrentlyStatus consumeMessage(List<MessageExt> msgs,
                 ConsumeConcurrentlyContext context) {
-                System.out.printf("%s Receive New Messages: %s %n", Thread.currentThread().getName(), msgs);
+                for (MessageExt msg : msgs) {
+                    System.out.println("[" + Thread.currentThread().getName() + "] queueId : "
+                            + msg.getQueueId() + ", offset : " + msg.getQueueOffset());
+                }
                 return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
             }
         });

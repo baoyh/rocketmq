@@ -21,6 +21,8 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.FileRegion;
+
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.List;
 import org.apache.rocketmq.broker.BrokerController;
@@ -240,6 +242,15 @@ public class PullMessageProcessor extends AsyncNettyRequestProcessor implements 
         final GetMessageResult getMessageResult =
             this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(), requestHeader.getTopic(),
                 requestHeader.getQueueId(), requestHeader.getQueueOffset(), requestHeader.getMaxMsgNums(), messageFilter);
+
+        if (getMessageResult != null /* && getMessageResult.getNextBeginOffset() != requestHeader.getQueueOffset()*/) {
+            // print the info
+            int port = ((InetSocketAddress) channel.remoteAddress()).getPort();
+            System.out.println("[" + Thread.currentThread().getName() + "][" + System.currentTimeMillis() + "][" + port + "] group : " + requestHeader.getConsumerGroup()
+                    + ", topic : " + requestHeader.getTopic() + ", queueId : " + requestHeader.getQueueId()
+                    + ", offset : " + requestHeader.getQueueOffset() + ", nextOffset: " + getMessageResult.getNextBeginOffset());
+        }
+
         if (getMessageResult != null) {
             response.setRemark(getMessageResult.getStatus().name());
             responseHeader.setNextBeginOffset(getMessageResult.getNextBeginOffset());

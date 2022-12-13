@@ -298,6 +298,7 @@ public class MQClientInstance {
             @Override
             public void run() {
                 try {
+                    // 持久化本地的 consumer offset 到 Broker 端
                     MQClientInstance.this.persistAllConsumerOffset();
                 } catch (Exception e) {
                     log.error("ScheduledTask persistAllConsumerOffset exception", e);

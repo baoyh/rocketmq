@@ -430,21 +430,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, RemotingCommand msg) throws Exception {
-            // 查找 broker 路由信息, for namesrv
-            if (msg.getCode() == RequestCode.GET_ROUTEINFO_BY_TOPIC) {
-                processMessageReceived(ctx, msg);
-            }
-            // 接收信息, for broker
-            else if (msg.getCode() == RequestCode.SEND_MESSAGE) {
-                processMessageReceived(ctx, msg);
-            }
-            // 注册 broker, for namesrv
-            else if (msg.getCode() == RequestCode.REGISTER_BROKER) {
-                processMessageReceived(ctx, msg);
-            }
-            else {
-                processMessageReceived(ctx, msg);
-            }
+            processMessageReceived(ctx, msg);
         }
     }
 
