@@ -40,6 +40,13 @@ public class RemotingServerTest {
     private static RemotingServer remotingServer;
     private static RemotingClient remotingClient;
 
+    public static void main(String[] args) throws InterruptedException {
+        remotingServer = createRemotingServer();
+        remotingServer.start();
+        remotingServer.shutdown();
+        remotingServer.start();
+    }
+
     public static RemotingServer createRemotingServer() throws InterruptedException {
         NettyServerConfig config = new NettyServerConfig();
         RemotingServer remotingServer = new NettyRemotingServer(config);

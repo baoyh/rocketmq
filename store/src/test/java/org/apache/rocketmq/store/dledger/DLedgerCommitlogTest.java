@@ -178,8 +178,8 @@ public class DLedgerCommitlogTest extends MessageStoreTestBase {
             Assert.assertEquals(results.get(i).getAppendMessageResult().getMsgId(), messageExt.getMsgId());
             Assert.assertEquals(results.get(i).getAppendMessageResult().getWroteOffset(), messageExt.getCommitLogOffset());
         }
-        messageStore.destroy();
-        messageStore.shutdown();
+//        messageStore.destroy();
+//        messageStore.shutdown();
     }
 
     @Test
